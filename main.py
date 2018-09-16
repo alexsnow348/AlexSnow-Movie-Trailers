@@ -1,30 +1,58 @@
 import media
 import fresh_tomatoes
+import requests as rq
+import json
 
-data_toy = dict()
-data_toy['movie_title'] = 'Toy Story'
-data_toy['movie_storyline'] = 'A story of a boy and his toys that come to life'
-data_toy['poster_image'] ='https://m.media-amazon.com/images/M/MV5BMDU2ZWJlMjktMTRhMy00ZTA5LWEzNDgtYmNmZTEwZTViZWJkXkEyXkFqcGdeQXVyNDQ2OTk4MzI@._V1_SY1000_SX670_AL_.jpg'
-data_toy['trailer_youtube']='https://www.youtube.com/watch?v=KYz2wyBy3kc'
+# Global variables
+BASE_URL = 'https://api.themoviedb.org/3/'
+MOVIE_PATH = 'movie/top_rated'
+APIKEY = '33c5e456ec2cf3f3a7b1bacc1996984d'
+LANGUAGE = 'en-US'
+PAGE = 1
+IMG_PATH ='https://image.tmdb.org/t/p/w1280'
+TOTAL_MOVIE_TO_DISPLAY = 6
 
+# Movie data generating function
+def get_trailer(id):
+    """ This function return the youtube video url. """
+    url = BASE_URL + 'movie/%s/videos?api_key=%s&language=%s&page=%s'% \
+          (id,APIKEY,LANGUAGE,PAGE)
+    content = rq.get(url)
+    data = content.text
+    data = json.loads(data)
+    data = data['results']
+    for each in data:
+        if each['type']=='Trailer':
+            video_source ='https://www.youtube.com/watch?v='+each['key']
+            break
+    return video_source
+def get_details():
+    """ This function produces movie details data. """
+    output_list = list()
+    url = BASE_URL + '%s?api_key=%s&language=%s&page=%s'% (MOVIE_PATH,APIKEY,
+                                                            LANGUAGE,PAGE)
+    content = rq.get(url)
+    data = content.text
+    data = json.loads(data)
+    data = data['results']
+    data = data[:TOTAL_MOVIE_TO_DISPLAY]
+    for each in data:
+        item = dict()
+        item['title'] = each['title']
+        item['storyline'] = each['overview']
+        item['poster'] =IMG_PATH+each['poster_path']
+        item['trailer'] = get_trailer(each['id'])
+        output_list.append(item)
+    return output_list
 
-data_avatar = dict()
-data_avatar['movie_title'] = 'Avatar'
-data_avatar['movie_storyline'] = 'A marine on an alien planet'
-data_avatar['poster_image'] ='http://collider.com/wp-content/uploads/avatar_movie_poster_01.jpg'
-data_avatar['trailer_youtube']='https://www.youtube.com/watch?v=5PSNL1qE6VY'
+# Call the data generating function to movie data generation from API
+movies = []
+movies_data_list = get_details()
 
-toy_story = media.Movie( data_toy['movie_title'] ,data_toy['movie_storyline'],
-                    data_toy['poster_image'],data_toy['trailer_youtube'])
+# Create Instances of Movie Class
+for each in movies_data_list:
+    movie = media.Movie(each['title'],each['storyline'],each['poster'],each['trailer'])
+    movies.append(movie)
 
-avatar_story = media.Movie( data_avatar['movie_title'] ,data_avatar['movie_storyline'],
-                    data_avatar['poster_image'],data_avatar['trailer_youtube'])
-
-movies = [toy_story,avatar_story]
-# print(toy_story.storyline)
-# print(avatar_story.storyline)
-# avatar_story.show_trailer()
-# fresh_tomatoes.open_movies_page(movies)
-# print(media.Movie.VALID_RATINGS)
-# print(media.Movie.__doc__)
-print(media.Movie.__module__)
+# Generate HTML file
+fresh_tomatoes.open_movies_page(movies)
